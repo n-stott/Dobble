@@ -21,37 +21,6 @@ struct Logo {
     bool operator!=(const Logo& other) const { return id != other.id; }
 };
 
-template<int U>
-struct MarkArray {
-
-    MarkArray() : work(), marker(1) {
-        std::fill(work.begin(), work.end(), 0);
-    }
-
-    void clear() {
-        ++marker;
-        if(marker > 2.0e9) {
-            marker = 1;
-            std::fill(work.begin(), work.end(), 0);
-        }
-    }
-
-    int& operator[](int i) {
-        return work[i];
-    }
-
-    void mark(int i) {
-        work[i] = marker;
-    }
-
-    bool isMarked(int i) const {
-        return work[i] == marker;
-    }
-
-    std::array<int, U> work;
-    int marker;
-};
-
 template<template_header>
 struct Card {
 
@@ -63,7 +32,6 @@ struct Card {
     std::array<int, U> active;
     int nz;
 
-    static MarkArray<U> work;
 
     bool compatibleWith(const Card& other) const {
         check();
@@ -127,9 +95,6 @@ struct Card {
     }
 
 };
-
-template<int N, int U>
-MarkArray<U> Card<N, U>::work;
 
 template<template_header>
 struct Solution {
