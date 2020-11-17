@@ -149,7 +149,6 @@ struct Solution {
         if(cards[cursor].nz == P) ++cursor;
         assert(cursor < P*(P+1));
         // cards[cursor].push(0);
-        // cards[cursor].pushBest();
         cards[cursor].pushBest();
     }
 
