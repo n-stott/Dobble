@@ -14,6 +14,7 @@ struct Logo {
 
     std::string toString(int P) const {
         std::string s;
+        // s += std::to_string(id);
         s += std::to_string(id%P) + char(65+(id)/P);
         return s;
     }
@@ -36,7 +37,7 @@ struct Card {
     }
 
     bool hasNext() const {
-        if(nz == 0) return false;
+        assert(nz > 0);
         bool ok = logos[nz-1].id + (P-nz) < U-1;
         return ok;
     }
@@ -60,8 +61,7 @@ struct Card {
     }
 
     void pushBest() {
-        if(nz == 0) push(0);
-        else push(logos[nz-1].id+1);
+        push(nz == 0 ? nz : logos[nz-1].id+1);
     }
 
     void pop() {
@@ -99,12 +99,10 @@ struct Card {
 template<template_header>
 struct Solution {
     std::array<Card<P,U>, P*(P+1)> cards;
-    std::array<short, U> usage;
     short cursor;
     bool abortFlag;
 
-    Solution() : cards(), usage(), cursor(0), abortFlag(false) {
-        std::fill(usage.begin(), usage.end(), 0);
+    Solution() : cards(), cursor(0), abortFlag(false) {
         for(short i = 0; i < P+1; ++i) {
             for(short j = 0; j < P; ++j) {
                 cards[P*i+j].init(i);
@@ -151,6 +149,7 @@ struct Solution {
         if(cards[cursor].nz == P) ++cursor;
         assert(cursor < P*(P+1));
         // cards[cursor].push(0);
+        // cards[cursor].pushBest();
         cards[cursor].pushBest();
     }
 
@@ -160,6 +159,29 @@ struct Solution {
         if(cursor == 2*P) abortFlag = true;
     }
 
+    void registerColumnUsage(short id) {
+        columnUsage[cursor/P][id] = 1;
+    }
+
+    void deregisterColumnUsage(short id) {
+        columnUsage[cursor/P][id] = 0;
+    }
+
+    void registerGlobalUsage(short id) {
+        const Card<P>& c = cards[cursor];
+        for(short i = 0; i < c.nz; ++i) {
+            globalUsage[c.logos[i].id][id] = 1;
+            globalUsage[i][c.logos[id].id] = 1;
+        }
+    }
+
+    void deregisterGlobalUsage(short id) {
+        const Card<P>& c = cards[cursor];
+        for(short i = 0; i < c.nz-1; ++i) {
+            globalUsage[c.logos[i].id][id] = 0;
+            globalUsage[i][c.logos[id].id] = 0;
+        }
+    }
 
     std::string toString() const { std::string s; for(short i = 0; i <= cursor; ++i) s += cards[i].toString() + '\n'; return s;}
 };
@@ -226,19 +248,17 @@ struct Solver {
             std::exit(0);
         }
 
-        // Solution<P> s = first(candidate);
         candidate.push();
-        Solution<P>& s = candidate;
-        backtrack(s);
+        backtrack(candidate);
         while(true) {
-            if(s.hasNext()) {
-                s.next();
-                backtrack(s);
+            if(candidate.hasNext()) {
+                candidate.next();
+                backtrack(candidate);
             } else {
                 break;
             }
         }
-        s.pop();
+        candidate.pop();
 
     }
 
@@ -248,7 +268,7 @@ struct Solver {
 };
 
 int main(int argc, const char* argv[]) {
-    constexpr int P = 6;
+    constexpr int P = 5;
     Solver<P> s;
     Solution<P> sol = Solution<P>::root();
     s.backtrack(sol);
