@@ -90,7 +90,19 @@ struct Card {
 
     std::string toString() const {
         std::string s;
-        for(int i = 0; i< nz; ++i) s += std::to_string(logos[i].id) + " ";
+        for(int i = 0; i< nz; ++i) s += ofLogo(logos[i]) + " ";
+        return s;
+    }
+
+    std::string ofLogo(Logo l) const {
+        std::string s;
+        int id = l.id;
+        if(id < N) {
+            s += std::to_string(id) + " ";
+        } else {
+            id = id-N;
+            s += std::to_string(id%(N-1)) + char(65+(id)/(N-1));
+        }
         return s;
     }
 
@@ -106,6 +118,7 @@ struct Solution {
     bool violates() const {
         if(nil) return true;
         if(cards.size() > U) return true;
+        if(cards.back().logos.size() < N && cards.back().logos.back() == U) return true;
         for(int i = 0; i < cards.size()-1; ++i) {
             if(!cards.back().compatibleWith(cards[i])) return true;
         }
@@ -150,8 +163,8 @@ struct Solution {
     std::string toString() const {
         std::string s;
         s += "nil?" + std::to_string(nil) + " ";
-        s += "s" + std::to_string(cards.size()) + " ";
-        for(const Card<N,U>& c : cards) s += c.toString() + " - ";
+        s += "s" + std::to_string(cards.size()) + '\n';
+        for(const Card<N,U>& c : cards) s += c.toString() + '\n';
         return s;
     }
 };
@@ -217,15 +230,17 @@ struct Solver {
     std::chrono::system_clock::time_point begin;
     std::chrono::system_clock::time_point current;
 
-    void backtrack(const Solution<N, U>& candidate) {
+    void backtrack(Solution<N, U>& candidate) {
         calls++;
-        if(calls % 10000000 == 0) {
+        if(calls % 1000000 == 0) {
             current = std::chrono::high_resolution_clock::now();
             auto elapsed = current - begin;
+            std::cout << "\x1B[2J\x1B[H";
             std::cout 
-                << (calls / 1.0e6) / (elapsed.count() / 1.0e9) << " Mcalls/s"
+                << (calls / 1.0e6) << " Mcalls\n"
+                << (calls / 1.0e6) / (elapsed.count() / 1.0e9) << " Mcalls/s" << '\n'
                 //<< elapsed.count() << " t"
-                //<< candidate.toString() 
+                << candidate.toString() 
                 << std::endl;    
         }
         if(reject(candidate)) return;
@@ -235,11 +250,13 @@ struct Solver {
             std::cout << "Total calls : " << calls << "\n";
             std::exit(0);
         }
+
         Solution<N, U> s = first(candidate);
         while(!s.isNil()) {
             backtrack(s);
             next(s);
         }
+
     }
 
     Solver() {
@@ -249,6 +266,9 @@ struct Solver {
 
 int main(int argc, const char* argv[]) {
     constexpr int N = 6;
-    Solver<N> s; 
-    s.backtrack(s.root());
+    Solver<N> s;
+    Solution<N> sol = s.root();
+    s.backtrack(sol);
+
+    std::cout << "Total calls : " << s.calls << "\n";
 }
