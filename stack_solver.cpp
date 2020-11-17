@@ -158,30 +158,6 @@ struct Solution {
         if(cursor == 2*P) abortFlag = true;
     }
 
-    void registerColumnUsage(short id) {
-        columnUsage[cursor/P][id] = 1;
-    }
-
-    void deregisterColumnUsage(short id) {
-        columnUsage[cursor/P][id] = 0;
-    }
-
-    void registerGlobalUsage(short id) {
-        const Card<P>& c = cards[cursor];
-        for(short i = 0; i < c.nz; ++i) {
-            globalUsage[c.logos[i].id][id] = 1;
-            globalUsage[i][c.logos[id].id] = 1;
-        }
-    }
-
-    void deregisterGlobalUsage(short id) {
-        const Card<P>& c = cards[cursor];
-        for(short i = 0; i < c.nz-1; ++i) {
-            globalUsage[c.logos[i].id][id] = 0;
-            globalUsage[i][c.logos[id].id] = 0;
-        }
-    }
-
     std::string toString() const { std::string s; for(short i = 0; i <= cursor; ++i) s += cards[i].toString() + '\n'; return s;}
 };
 
