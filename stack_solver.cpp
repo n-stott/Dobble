@@ -37,7 +37,6 @@ struct Card {
 
     bool hasNext() const {
         if(nz == 0) return false;
-        // return logos[nz-1].id < U-1;
         bool ok = logos[nz-1].id + (P-nz) < U-1;
         return ok;
     }
@@ -227,7 +226,9 @@ struct Solver {
             std::exit(0);
         }
 
-        Solution<P> s = first(candidate);
+        // Solution<P> s = first(candidate);
+        candidate.push();
+        Solution<P>& s = candidate;
         backtrack(s);
         while(true) {
             if(s.hasNext()) {
@@ -237,6 +238,7 @@ struct Solver {
                 break;
             }
         }
+        s.pop();
 
     }
 
