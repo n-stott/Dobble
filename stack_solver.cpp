@@ -155,10 +155,10 @@ struct Solution {
     void pop() {
         cards[cursor].pop();
         if(cards[cursor].nz == 0) --cursor;
-        if(cursor == 2*P) abortFlag = true;
+        if(cursor == P+2*U+1) abortFlag = true;
     }
 
-    std::string toString() const { std::string s; for(short i = 0; i <= cursor; ++i) s += cards[i].toString() + '\n'; return s;}
+    std::string toString() const { std::string s; for(short i = 0; i <= cursor; ++i) s += cards[i].toString() + ((1+i)%P == 0 ? "\n\n" : "\n"); return s;}
 };
 
 
@@ -208,7 +208,10 @@ struct Solver {
 #endif
         if(candidate.reject()) {
 #if CHECK_IMMEDIATE_REJECT
-            if(immediateCandidate) immediatelyRejected++;
+            if(immediateCandidate) {
+                // std::cout << candidate.toString() << std::endl;
+                immediatelyRejected++;
+            }
             immediateCandidate = false;
 #endif
             return;
@@ -242,11 +245,24 @@ struct Solver {
     }
 };
 
-int main(int argc, const char* argv[]) {
-    constexpr int P = 5;
+template<int P>
+void run() {
     Solver<P> s;
     Solution<P> sol = Solution<P>::root();
     s.backtrack(sol);
-
     std::cout << "Total calls : " << s.calls << "\n";
+}
+
+int main(int argc, const char* argv[]) {
+    if(argc != 2) {
+        std::cout << "Usage : exe P\n";
+    } else {
+        if(std::atoi(argv[1]) == 1) run<1>();
+        if(std::atoi(argv[1]) == 2) run<2>();
+        if(std::atoi(argv[1]) == 3) run<3>();
+        if(std::atoi(argv[1]) == 4) run<4>();
+        if(std::atoi(argv[1]) == 5) run<5>();
+        if(std::atoi(argv[1]) == 6) run<6>();
+        if(std::atoi(argv[1]) == 7) run<7>();
+    }
 }
