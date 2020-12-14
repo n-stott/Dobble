@@ -38,7 +38,7 @@ struct Card {
 
     bool hasNext() const {
         assert(nz > 0);
-        bool ok = (logos[nz-1].id + (P-nz) < U-1) && (logos[nz-1].id < P*nz-1);
+        bool ok = (logos[nz-1].id < P*nz-1);
         return ok;
     }
 
@@ -62,7 +62,8 @@ struct Card {
 
     void pushBest() {
         // push(nz == 0 ? nz : logos[nz-1].id+1);
-        push(nz == 0 ? nz : std::max(P*nz, logos[nz-1].id+1));
+        push(P*nz);
+        // push(nz == 0 ? nz : std::max(P*nz, logos[nz-1].id+1));
     }
 
     void pop() {
@@ -126,7 +127,7 @@ struct Solution {
 
     bool reject() const {
         if(cards[cursor].nz > 0 && cards[cursor].logos[0].id != cursor % P) return true;
-        for(int i = 0; i < cursor; ++i) {
+        for(int i = cursor; i --> 0;) {
             if(!cards[cursor].compatibleWith(cards[i])) {
                 // std::cout << "rejected : incompatibility : " << std::endl;
                 // std::cout << cards[cursor].toString() << std::endl;
@@ -206,11 +207,12 @@ struct Solver {
     void backtrack(Solution<P>& candidate) {
         // std::cout << candidate.toString() << '\n';
         calls++;
-        if(calls % 10000000 == 0) {
+        if(calls % ( 1 << 21 ) == 0) {
             log(candidate);
         }
 
         if(candidate.abort()) {
+            log(candidate);
             std::cout << "No solution found" << std::endl;
             std::cout << "Total calls : " << calls << "\n";
             std::exit(0);
@@ -222,6 +224,7 @@ struct Solver {
         if(candidate.reject()) {
 #if CHECK_IMMEDIATE_REJECT
             if(immediateCandidate) {
+                // std::cout << candidate.toString() << '\n';
                 immediatelyRejected++;
             }
             immediateCandidate = false;
@@ -269,12 +272,19 @@ int main(int argc, const char* argv[]) {
     if(argc != 2) {
         std::cout << "Usage : exe P\n";
     } else {
-        if(std::atoi(argv[1]) == 1) run<1>();
-        if(std::atoi(argv[1]) == 2) run<2>();
-        if(std::atoi(argv[1]) == 3) run<3>();
-        if(std::atoi(argv[1]) == 4) run<4>();
-        if(std::atoi(argv[1]) == 5) run<5>();
-        if(std::atoi(argv[1]) == 6) run<6>();
-        if(std::atoi(argv[1]) == 7) run<7>();
+        int P = std::atoi(argv[1]);
+        switch(P) {
+            case 1: run<1>(); break;
+            case 2: run<2>(); break;
+            case 3: run<3>(); break;
+            case 4: run<4>(); break;
+            case 5: run<5>(); break;
+            case 6: run<6>(); break;
+            case 7: run<7>(); break;
+            case 8: run<8>(); break;
+            case 9: run<9>(); break;
+            case 10: run<10>(); break;
+            default: std::cout << "P = " << P << " not supported yet\n";
+        }
     }
 }
