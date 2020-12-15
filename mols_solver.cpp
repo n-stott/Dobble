@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <cassert>
 #include <chrono>
+#include <cmath>
 
 #define template_header int P, int U = P*P
 
@@ -27,6 +28,7 @@ struct Card {
     short nz;
     std::array<Logo, P> logos;
     std::array<short, U> active;
+    std::array<short, P> number;
 
     constexpr Card() : header(-1), nz(0), logos(), active() { }
 
@@ -34,6 +36,7 @@ struct Card {
         this->header = header;
         nz = 0;
         std::fill(active.begin(), active.end(), 0);
+        std::fill(number.begin(), number.end(), 0);
     }
 
     bool hasNext() const {
@@ -46,24 +49,27 @@ struct Card {
         check();
         assert(hasNext());
         active[logos[nz-1].id] = 0;
+        --number[logos[nz-1].id % P];
         logos[nz-1].id++;
+        if(header > 0 && nz < P) while(number[logos[nz-1].id % P] && logos[nz-1].id < P*nz-1) logos[nz-1].id++;
         active[logos[nz-1].id] = 1;
+        ++number[logos[nz-1].id % P];
         check();
     }
 
     void push(int id) {
         check();
+        if(header > 0) while(number[id % P] > 0) ++id;
         assert(active[id] == 0);
         logos[nz].id = id;
         active[id] = 1;
+        ++number[id % P];
         ++nz;
         check();
     }
 
     void pushBest() {
-        // push(nz == 0 ? nz : logos[nz-1].id+1);
         push(P*nz);
-        // push(nz == 0 ? nz : std::max(P*nz, logos[nz-1].id+1));
     }
 
     void pop() {
@@ -71,6 +77,7 @@ struct Card {
         --nz;
         assert(active[logos[nz].id] == 1);
         active[logos[nz].id] = 0;
+        --number[logos[nz].id % P];
         check();
     }
 
@@ -97,6 +104,7 @@ struct Card {
                 std::cout << toString() << std::endl;
             }
             assert(active[logos[i].id] == 1);
+            assert(number[logos[i].id % P] >= 0);
         }
         #endif
     }
@@ -129,10 +137,6 @@ struct Solution {
         if(cards[cursor].nz > 0 && cards[cursor].logos[0].id != cursor % P) return true;
         for(int i = cursor; i --> 0;) {
             if(!cards[cursor].compatibleWith(cards[i])) {
-                // std::cout << "rejected : incompatibility : " << std::endl;
-                // std::cout << cards[cursor].toString() << std::endl;
-                // std::cout << "and"  << std::endl;
-                // std::cout << cards[i].toString()  << std::endl;
                 return true;
             }
         }
@@ -185,28 +189,50 @@ struct Solver {
     long long immediatelyRejected = 0;
     bool immediateCandidate = false;
 #endif
+    bool debugMode = false;
     std::chrono::system_clock::time_point begin;
     std::chrono::system_clock::time_point current;
+
+    short height = 0;
+    short summit = 0;
+    std::array<long long, P*U> spent;
+
+    std::string repartition() const {
+        std::string s;
+        for(int i = 0; i < U; ++i) {
+            double acc = 0;
+            for(int p = 0; p < P; ++p) {
+                acc += std::log10(1+spent[P*i+p]);
+            }
+            acc += (acc > 0);
+            s += std::string((int)acc, '*') + '\n';
+        }
+        return s;
+    }
 
     void log(const Solution<P>& candidate) {
         current = std::chrono::high_resolution_clock::now();
         auto elapsed = current - begin;
         std::cout << "\x1B[2J\x1B[H";
         std::cout 
-            << "Cursor : " << candidate.cursor << '\n'
-            << "AbortH : " << candidate.abortHeight << '\n'
+            << "Current : " << height << '\n'
+            << "Max     : " << summit << '\n'
+            << "Target  : " << P*U << '\n'
             << (calls / 1.0e6) << " Mcalls\n"
             << (calls / 1.0e6) / (elapsed.count() / 1.0e9) << " Mcalls/s" << '\n'
 #if CHECK_IMMEDIATE_REJECT
             << (100.0 * immediatelyRejected / calls) << "% reject \n"
 #endif
+            // << repartition()
             << candidate.toString() 
             << std::endl;    
     }
 
     void backtrack(Solution<P>& candidate) {
-        // std::cout << candidate.toString() << '\n';
         calls++;
+        height = P*candidate.cursor + candidate.cards[candidate.cursor].nz;
+        summit = std::max(summit, height);
+        ++spent[height];
         if(calls % ( 1 << 21 ) == 0) {
             log(candidate);
         }
@@ -220,19 +246,17 @@ struct Solver {
 
 #if CHECK_IMMEDIATE_REJECT
         immediateCandidate = true;
-#endif
         if(candidate.reject()) {
-#if CHECK_IMMEDIATE_REJECT
             if(immediateCandidate) {
-                // std::cout << candidate.toString() << '\n';
+                if(debugMode) std::cout << candidate.toString() << std::endl;
                 immediatelyRejected++;
             }
             immediateCandidate = false;
-#endif
             return;
         }
-#if CHECK_IMMEDIATE_REJECT
         immediateCandidate = false;
+#else
+        if(candidate.reject()) return;
 #endif
         if(candidate.accept()) {
             log(candidate);
@@ -243,13 +267,9 @@ struct Solver {
 
         candidate.push();
         backtrack(candidate);
-        while(true) {
-            if(candidate.hasNext()) {
-                candidate.next();
-                backtrack(candidate);
-            } else {
-                break;
-            }
+        while(candidate.hasNext()) {
+            candidate.next();
+            backtrack(candidate);
         }
         candidate.pop();
 
@@ -257,33 +277,38 @@ struct Solver {
 
     Solver() {
         begin = std::chrono::high_resolution_clock::now();
+        std::fill(spent.begin(), spent.end(), 0);
     }
 };
 
 template<int P>
-void run() {
+void run(bool debugMode) {
     Solver<P> s;
+    s.debugMode = debugMode;
     Solution<P> sol = Solution<P>::root();
     s.backtrack(sol);
     std::cout << "Total calls : " << s.calls << "\n";
 }
 
 int main(int argc, const char* argv[]) {
-    if(argc != 2) {
-        std::cout << "Usage : exe P\n";
+    if(argc != 2 && argc != 3) {
+        std::cout << "Usage : exe P debugMode\n";
     } else {
-        int P = std::atoi(argv[1]);
+        int P;
+        int d = false;
+        if(argc >= 2) P = std::atoi(argv[1]);
+        if(argc >= 3) d = std::atoi(argv[2]);
         switch(P) {
-            case 1: run<1>(); break;
-            case 2: run<2>(); break;
-            case 3: run<3>(); break;
-            case 4: run<4>(); break;
-            case 5: run<5>(); break;
-            case 6: run<6>(); break;
-            case 7: run<7>(); break;
-            case 8: run<8>(); break;
-            case 9: run<9>(); break;
-            case 10: run<10>(); break;
+            case 1: run<1>(d); break;
+            case 2: run<2>(d); break;
+            case 3: run<3>(d); break;
+            case 4: run<4>(d); break;
+            case 5: run<5>(d); break;
+            case 6: run<6>(d); break;
+            case 7: run<7>(d); break;
+            case 8: run<8>(d); break;
+            case 9: run<9>(d); break;
+            case 10: run<10>(d); break;
             default: std::cout << "P = " << P << " not supported yet\n";
         }
     }
